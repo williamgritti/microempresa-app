@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ produto.nome }} - Sistema de Gestão{% endblock %}
+{% block page_title %}Detalhes do Produto{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="bi bi-box-seam me-2"></i>{{ produto.nome }}
+                    {% if not produto.ativo %}
+                    <span class="badge bg-secondary ms-2">Inativo</span>
+                    {% endif %}
+                </span>
+                <div class="btn-group btn-group-sm">
+                    <a href="{{ url_for('produtos.movimentar', id=produto.id) }}" class="btn btn-outline-success">
+                        <i class="bi bi-box-arrow-in-down"></i> Movimentar
+                    </a>
+                    <a href="{{ url_for('produtos.editar', id=produto.id) }}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Editar
+                    </a>
+                    <button type="button" class="btn btn-outline-danger" onclick="confirmarExclusao()">
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label text-muted small">Código</label>
+                        <p class="mb-0">{{ produto.codigo or '-' }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted small">Categoria</label>
+                        <p class="mb-0">{{ produto.categoria or '-' }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted small">Unidade</label>
+                        <p class="mb-0">{{ produto.unidade }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted small">Preço de Custo</label>
+                        <p class="mb-0">R$ {{ "%.2f"|format(produto.preco_custo) }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted small">Preço de Venda</label>
+                        <p class="mb-0 fw-bold">R$ {{ "%.2f"|format(produto.preco_venda) }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted small">Margem de Lucro</label>
+                        <p class="mb-0 {{ 'text-success' if produto.margem_lucro > 0 else 'text-danger' }}">
+                            {{ "%.1f"|format(produto.margem_lucro) }}%
+                        </p>
+                    </div>
+                    {% if produto.descricao %}
+                    <div class="col-12">
+                        <label class="form-label text-muted small">Descrição</label>
+                        <p class="mb-0">{{ produto.descricao }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Card de Estoque -->
+        <div class="card mb-3 {{ 'border-warning' if produto.estoque_baixo else '' }}">
+            <div class="card-header {{ 'bg-warning text-dark' if produto.estoque_baixo else '' }}">
+                <i class="bi bi-box me-2"></i>Estoque
+                {% if produto.estoque_baixo %}
+                <i class="bi bi-exclamation-triangle float-end"></i>
+                {% endif %}
+            </div>
+            <div class="card-body text-center">
+                <h2 class="{{ 'text-danger' if produto.estoque_baixo else 'text-primary' }}">
+                    {{ produto.quantidade }} {{ produto.unidade }}
+                </h2>
+                <p class="text-muted mb-0">Estoque mínimo: {{ produto.estoque_minimo }} {{ produto.unidade }}</p>
+                {% if produto.estoque_baixo %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Estoque abaixo do mínimo!
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Últimas Movimentações -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-arrow-left-right me-2"></i>Últimas Movimentações
+            </div>
+            <div class="card-body p-0">
+                {% if movimentacoes %}
+                <ul class="list-group list-group-flush">
+                    {% for mov in movimentacoes %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge {{ 'bg-success' if mov.tipo == 'entrada' else 'bg-danger' }}">
+                                {{ mov.tipo|capitalize }}
+                            </span>
+                            <span class="ms-2">{{ mov.quantidade }} {{ produto.unidade }}</span>
+                            {% if mov.motivo %}
+                            <br><small class="text-muted">{{ mov.motivo[:30] }}</small>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">{{ mov.data.strftime('%d/%m/%Y') }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">Nenhuma movimentação</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza que deseja excluir o produto <strong>{{ produto.nome }}</strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{{ url_for('produtos.excluir', id=produto.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Excluir</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmarExclusao() {
+    new bootstrap.Modal(document.getElementById('modalExcluir')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Editar' if orcamento else 'Novo' }} Orçamento - Sistema de Gestão{% endblock %}
+{% block page_title %}{{ 'Editar' if orcamento else 'Novo' }} Orçamento{% endblock %}
+
+{% block content %}
+<form method="POST" id="formOrcamento">
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-file-text me-2"></i>Dados do Orçamento
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Cliente</label>
+                            <select name="cliente_id" class="form-select">
+                                <option value="">Selecione um cliente...</option>
+                                {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}" {{ 'selected' if orcamento and orcamento.cliente_id == cliente.id }}>
+                                    {{ cliente.nome }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Data</label>
+                            <input type="date" name="data" class="form-control"
+                                   value="{{ orcamento.data.strftime('%Y-%m-%d') if orcamento else now().strftime('%Y-%m-%d') }}">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Validade</label>
+                            <input type="date" name="validade" class="form-control"
+                                   value="{{ orcamento.validade.strftime('%Y-%m-%d') if orcamento and orcamento.validade else '' }}">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Observações</label>
+                            <textarea name="observacoes" class="form-control" rows="2">{{ orcamento.observacoes if orcamento else '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Itens -->
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ul me-2"></i>Itens</span>
+                    <button type="button" class="btn btn-sm btn-success" onclick="adicionarItem()">
+                        <i class="bi bi-plus-lg"></i> Adicionar Item
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="tabelaItens">
+                            <thead>
+                                <tr>
+                                    <th style="width: 150px;">Produto</th>
+                                    <th>Descrição</th>
+                                    <th style="width: 100px;">Qtd</th>
+                                    <th style="width: 130px;">Valor Unit.</th>
+                                    <th style="width: 120px;">Total</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itensBody">
+                                {% if orcamento and orcamento.itens %}
+                                    {% for item in orcamento.itens %}
+                                    <tr class="item-row">
+                                        <td>
+                                            <select name="item_produto_id[]" class="form-select form-select-sm produto-select">
+                                                <option value="">-</option>
+                                                {% for p in produtos %}
+                                                <option value="{{ p.id }}" data-preco="{{ p.preco_venda }}" data-nome="{{ p.nome }}"
+                                                        {{ 'selected' if item.produto_id == p.id }}>
+                                                    {{ p.nome[:20] }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="item_descricao[]" class="form-control form-control-sm" required
+                                                   value="{{ item.descricao }}">
+                                        </td>
+                                        <td>
+                                            <input type="text" name="item_quantidade[]" class="form-control form-control-sm quantidade-input"
+                                                   value="{{ item.quantidade }}" onchange="calcularTotais()">
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">R$</span>
+                                                <input type="text" name="item_valor[]" class="form-control valor-input"
+                                                       value="{{ '%.2f'|format(item.valor_unitario)|replace('.', ',') }}" onchange="calcularTotais()">
+                                            </div>
+                                        </td>
+                                        <td class="text-end item-total">R$ {{ "%.2f"|format(item.total) }}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerItem(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr class="item-row">
+                                    <td>
+                                        <select name="item_produto_id[]" class="form-select form-select-sm produto-select">
+                                            <option value="">-</option>
+                                            {% for p in produtos %}
+                                            <option value="{{ p.id }}" data-preco="{{ p.preco_venda }}" data-nome="{{ p.nome }}">
+                                                {{ p.nome[:20] }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="item_descricao[]" class="form-control form-control-sm" required>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="item_quantidade[]" class="form-control form-control-sm quantidade-input"
+                                               value="1" onchange="calcularTotais()">
+                                    </td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">R$</span>
+                                            <input type="text" name="item_valor[]" class="form-control valor-input"
+                                                   value="0,00" onchange="calcularTotais()">
+                                        </div>
+                                    </td>
+                                    <td class="text-end item-total">R$ 0,00</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerItem(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumo -->
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header">
+                    <i class="bi bi-calculator me-2"></i>Resumo
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">R$ 0,00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 align-items-center">
+                        <span>Desconto:</span>
+                        <div class="input-group input-group-sm" style="width: 120px;">
+                            <span class="input-group-text">R$</span>
+                            <input type="text" name="desconto" class="form-control" id="desconto"
+                                   value="{{ '%.2f'|format(orcamento.desconto)|replace('.', ',') if orcamento else '0,00' }}"
+                                   onchange="calcularTotais()">
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>Total:</strong>
+                        <strong id="total" class="text-primary fs-4">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Salvar Orçamento
+                        </button>
+                        <a href="{{ url_for('orcamentos.listar') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const produtosData = [
+    {% for p in produtos %}
+    { id: {{ p.id }}, nome: "{{ p.nome }}", preco: {{ p.preco_venda }} },
+    {% endfor %}
+];
+
+function adicionarItem() {
+    const tbody = document.getElementById('itensBody');
+    const tr = document.createElement('tr');
+    tr.className = 'item-row';
+    tr.innerHTML = `
+        <td>
+            <select name="item_produto_id[]" class="form-select form-select-sm produto-select">
+                <option value="">-</option>
+                {% for p in produtos %}
+                <option value="{{ p.id }}" data-preco="{{ p.preco_venda }}" data-nome="{{ p.nome }}">{{ p.nome[:20] }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <input type="text" name="item_descricao[]" class="form-control form-control-sm" required>
+        </td>
+        <td>
+            <input type="text" name="item_quantidade[]" class="form-control form-control-sm quantidade-input"
+                   value="1" onchange="calcularTotais()">
+        </td>
+        <td>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text">R$</span>
+                <input type="text" name="item_valor[]" class="form-control valor-input"
+                       value="0,00" onchange="calcularTotais()">
+            </div>
+        </td>
+        <td class="text-end item-total">R$ 0,00</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerItem(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+    inicializarSelects();
+}
+
+function removerItem(btn) {
+    const tbody = document.getElementById('itensBody');
+    if (tbody.querySelectorAll('.item-row').length > 1) {
+        btn.closest('tr').remove();
+        calcularTotais();
+    } else {
+        alert('O orçamento deve ter pelo menos um item.');
+    }
+}
+
+function calcularTotais() {
+    let subtotal = 0;
+
+    document.querySelectorAll('.item-row').forEach(row => {
+        const qtd = parseFloat(row.querySelector('.quantidade-input').value.replace(',', '.')) || 0;
+        const valor = parseFloat(row.querySelector('.valor-input').value.replace(',', '.')) || 0;
+        const total = qtd * valor;
+
+        row.querySelector('.item-total').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+        subtotal += total;
+    });
+
+    const desconto = parseFloat(document.getElementById('desconto').value.replace(',', '.')) || 0;
+    const total = subtotal - desconto;
+
+    document.getElementById('subtotal').textContent = 'R$ ' + subtotal.toFixed(2).replace('.', ',');
+    document.getElementById('total').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+}
+
+function inicializarSelects() {
+    document.querySelectorAll('.produto-select').forEach(select => {
+        select.removeEventListener('change', onProdutoChange);
+        select.addEventListener('change', onProdutoChange);
+    });
+}
+
+function onProdutoChange(e) {
+    const select = e.target;
+    const row = select.closest('tr');
+    const option = select.options[select.selectedIndex];
+
+    if (option.value) {
+        const nome = option.dataset.nome;
+        const preco = option.dataset.preco;
+
+        row.querySelector('input[name="item_descricao[]"]').value = nome;
+        row.querySelector('.valor-input').value = parseFloat(preco).toFixed(2).replace('.', ',');
+    }
+
+    calcularTotais();
+}
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarSelects();
+    calcularTotais();
+});
+</script>
+{% endblock %}

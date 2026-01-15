@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Editar' if produto else 'Novo' }} Produto - Sistema de Gestão{% endblock %}
+{% block page_title %}{{ 'Editar' if produto else 'Novo' }} Produto{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Código</label>
+                    <input type="text" name="codigo" class="form-control"
+                           value="{{ produto.codigo if produto else '' }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Nome *</label>
+                    <input type="text" name="nome" class="form-control" required
+                           value="{{ produto.nome if produto else '' }}">
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Unidade</label>
+                    <select name="unidade" class="form-select">
+                        {% set unidades = ['UN', 'KG', 'G', 'L', 'ML', 'M', 'CM', 'CX', 'PCT', 'HR'] %}
+                        {% for un in unidades %}
+                        <option value="{{ un }}" {{ 'selected' if produto and produto.unidade == un }}>{{ un }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Categoria</label>
+                    <input type="text" name="categoria" class="form-control" list="categorias"
+                           value="{{ produto.categoria if produto else '' }}">
+                    <datalist id="categorias">
+                        <option value="Eletrônicos">
+                        <option value="Alimentos">
+                        <option value="Vestuário">
+                        <option value="Serviços">
+                        <option value="Outros">
+                    </datalist>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Preço de Custo</label>
+                    <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="text" name="preco_custo" class="form-control currency-input"
+                               value="{{ '%.2f'|format(produto.preco_custo)|replace('.', ',') if produto else '0,00' }}">
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Preço de Venda *</label>
+                    <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="text" name="preco_venda" class="form-control currency-input" required
+                               value="{{ '%.2f'|format(produto.preco_venda)|replace('.', ',') if produto else '0,00' }}">
+                    </div>
+                </div>
+
+                {% if not produto %}
+                <div class="col-md-6">
+                    <label class="form-label">Quantidade Inicial</label>
+                    <input type="text" name="quantidade" class="form-control"
+                           value="0">
+                </div>
+                {% endif %}
+
+                <div class="col-md-6">
+                    <label class="form-label">Estoque Mínimo</label>
+                    <input type="text" name="estoque_minimo" class="form-control"
+                           value="{{ produto.estoque_minimo if produto else '0' }}">
+                    <small class="text-muted">Alerta quando estoque atingir este valor</small>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Descrição</label>
+                    <textarea name="descricao" class="form-control" rows="3">{{ produto.descricao if produto else '' }}</textarea>
+                </div>
+
+                {% if produto %}
+                <div class="col-12">
+                    <div class="form-check">
+                        <input type="checkbox" name="ativo" class="form-check-input" id="ativo"
+                               {{ 'checked' if produto.ativo else '' }}>
+                        <label class="form-check-label" for="ativo">Produto ativo</label>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Salvar
+                </button>
+                <a href="{{ url_for('produtos.listar') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-lg"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

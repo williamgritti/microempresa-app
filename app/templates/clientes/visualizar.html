@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ cliente.nome }} - Sistema de Gestão{% endblock %}
+{% block page_title %}Detalhes do Cliente{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-person me-2"></i>{{ cliente.nome }}</span>
+                <div class="btn-group btn-group-sm">
+                    <a href="{{ url_for('clientes.editar', id=cliente.id) }}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil"></i> Editar
+                    </a>
+                    <button type="button" class="btn btn-outline-danger" onclick="confirmarExclusao()">
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small">Documento</label>
+                        <p class="mb-0">
+                            {% if cliente.documento %}
+                                {{ cliente.tipo_documento }}: {{ cliente.documento }}
+                            {% else %}
+                                <span class="text-muted">Não informado</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small">Email</label>
+                        <p class="mb-0">{{ cliente.email or '-' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small">Telefone</label>
+                        <p class="mb-0">{{ cliente.telefone or '-' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small">Cadastro</label>
+                        <p class="mb-0">{{ cliente.created_at.strftime('%d/%m/%Y') }}</p>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label text-muted small">Endereço</label>
+                        <p class="mb-0">
+                            {% if cliente.endereco %}
+                                {{ cliente.endereco }}
+                                {% if cliente.cidade %}, {{ cliente.cidade }}{% endif %}
+                                {% if cliente.estado %} - {{ cliente.estado }}{% endif %}
+                                {% if cliente.cep %} - CEP: {{ cliente.cep }}{% endif %}
+                            {% else %}
+                                <span class="text-muted">Não informado</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% if cliente.observacoes %}
+                    <div class="col-12">
+                        <label class="form-label text-muted small">Observações</label>
+                        <p class="mb-0">{{ cliente.observacoes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Orçamentos do cliente -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-file-text me-2"></i>Orçamentos
+            </div>
+            <div class="card-body p-0">
+                {% if cliente.orcamentos %}
+                <ul class="list-group list-group-flush">
+                    {% for orc in cliente.orcamentos[:5] %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <a href="{{ url_for('orcamentos.visualizar', id=orc.id) }}" class="text-decoration-none">
+                                {{ orc.numero }}
+                            </a>
+                            <br><small class="text-muted">{{ orc.data.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                        <span class="badge {{ 'bg-warning text-dark' if orc.status == 'pendente' else 'bg-success' if orc.status == 'aprovado' else 'bg-secondary' }}">
+                            {{ orc.status|capitalize }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">Nenhum orçamento</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Movimentações do cliente -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-cash-stack me-2"></i>Movimentações
+            </div>
+            <div class="card-body p-0">
+                {% if cliente.movimentacoes %}
+                <ul class="list-group list-group-flush">
+                    {% for mov in cliente.movimentacoes[:5] %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            {{ mov.descricao[:20] }}{% if mov.descricao|length > 20 %}...{% endif %}
+                            <br><small class="text-muted">{{ mov.data.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                        <span class="{{ 'text-success' if mov.tipo == 'entrada' else 'text-danger' }}">
+                            R$ {{ "%.2f"|format(mov.valor) }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted text-center py-3 mb-0">Nenhuma movimentação</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza que deseja excluir o cliente <strong>{{ cliente.nome }}</strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{{ url_for('clientes.excluir', id=cliente.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Excluir</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmarExclusao() {
+    new bootstrap.Modal(document.getElementById('modalExcluir')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Editar' if movimentacao else 'Nova' }} Movimentação - Sistema de Gestão{% endblock %}
+{% block page_title %}{{ 'Editar' if movimentacao else 'Nova' }} Movimentação{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo *</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="tipo" id="entrada" value="entrada"
+                                       {{ 'checked' if (movimentacao and movimentacao.tipo == 'entrada') or (not movimentacao and tipo_mov == 'entrada') }}>
+                                <label class="btn btn-outline-success" for="entrada">
+                                    <i class="bi bi-arrow-down-circle"></i> Entrada
+                                </label>
+
+                                <input type="radio" class="btn-check" name="tipo" id="saida" value="saida"
+                                       {{ 'checked' if (movimentacao and movimentacao.tipo == 'saida') or (not movimentacao and tipo_mov == 'saida') }}>
+                                <label class="btn btn-outline-danger" for="saida">
+                                    <i class="bi bi-arrow-up-circle"></i> Saída
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Valor *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="text" name="valor" class="form-control currency-input" required
+                                       value="{{ '%.2f'|format(movimentacao.valor)|replace('.', ',') if movimentacao else '' }}">
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Descrição *</label>
+                            <input type="text" name="descricao" class="form-control" required
+                                   value="{{ movimentacao.descricao if movimentacao else '' }}"
+                                   placeholder="Ex: Pagamento de fornecedor, Venda para cliente...">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Categoria</label>
+                            <select name="categoria" class="form-select" id="categoria">
+                                <option value="">Selecione...</option>
+                                <optgroup label="Entradas" id="catEntradas">
+                                    {% for cat in categorias_entrada %}
+                                    <option value="{{ cat }}" {{ 'selected' if movimentacao and movimentacao.categoria == cat }}>{{ cat }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                <optgroup label="Saídas" id="catSaidas">
+                                    {% for cat in categorias_saida %}
+                                    <option value="{{ cat }}" {{ 'selected' if movimentacao and movimentacao.categoria == cat }}>{{ cat }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Cliente (opcional)</label>
+                            <select name="cliente_id" class="form-select">
+                                <option value="">Nenhum</option>
+                                {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}" {{ 'selected' if movimentacao and movimentacao.cliente_id == cliente.id }}>
+                                    {{ cliente.nome }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Data *</label>
+                            <input type="date" name="data" class="form-control" required
+                                   value="{{ movimentacao.data.strftime('%Y-%m-%d') if movimentacao else now().strftime('%Y-%m-%d') }}">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Vencimento</label>
+                            <input type="date" name="data_vencimento" class="form-control"
+                                   value="{{ movimentacao.data_vencimento.strftime('%Y-%m-%d') if movimentacao and movimentacao.data_vencimento else '' }}">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Forma de Pagamento</label>
+                            <select name="forma_pagamento" class="form-select">
+                                <option value="">Selecione...</option>
+                                {% set formas = ['Dinheiro', 'PIX', 'Cartão Débito', 'Cartão Crédito', 'Boleto', 'Transferência'] %}
+                                {% for forma in formas %}
+                                <option value="{{ forma }}" {{ 'selected' if movimentacao and movimentacao.forma_pagamento == forma }}>{{ forma }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input type="checkbox" name="pago" class="form-check-input" id="pago"
+                                       {{ 'checked' if not movimentacao or movimentacao.pago }}>
+                                <label class="form-check-label" for="pago">
+                                    Já foi pago/recebido
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Salvar
+                        </button>
+                        <a href="{{ url_for('financeiro.listar') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Formatação de moeda
+document.querySelectorAll('.currency-input').forEach(input => {
+    input.addEventListener('input', function(e) {
+        let value = this.value.replace(/\D/g, '');
+        value = (parseInt(value) / 100).toFixed(2);
+        this.value = value.replace('.', ',');
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Sistema de Gestão{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card primary">
+            <div class="stat-value">{{ total_clientes }}</div>
+            <div class="stat-label"><i class="bi bi-people"></i> Clientes</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card success">
+            <div class="stat-value">{{ total_produtos }}</div>
+            <div class="stat-label"><i class="bi bi-box-seam"></i> Produtos</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card warning">
+            <div class="stat-value">{{ produtos_estoque_baixo }}</div>
+            <div class="stat-label"><i class="bi bi-exclamation-triangle"></i> Estoque Baixo</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card info">
+            <div class="stat-value">{{ orcamentos_pendentes }}</div>
+            <div class="stat-label"><i class="bi bi-file-text"></i> Orç. Pendentes</div>
+        </div>
+    </div>
+</div>
+
+<!-- Financial Summary -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Entradas do Mês</h6>
+                <h3 class="text-success mb-0">R$ {{ "%.2f"|format(entradas_mes) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Saídas do Mês</h6>
+                <h3 class="text-danger mb-0">R$ {{ "%.2f"|format(saidas_mes) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Saldo do Mês</h6>
+                <h3 class="{{ 'text-success' if saldo_mes >= 0 else 'text-danger' }} mb-0">
+                    R$ {{ "%.2f"|format(saldo_mes) }}
+                </h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Contas a Receber</h6>
+                <h4 class="text-primary mb-0">R$ {{ "%.2f"|format(contas_receber) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Contas a Pagar</h6>
+                <h4 class="text-danger mb-0">R$ {{ "%.2f"|format(contas_pagar) }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Últimas Movimentações -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-cash-stack me-2"></i>Últimas Movimentações</span>
+                <a href="{{ url_for('financeiro.listar') }}" class="btn btn-sm btn-outline-primary">Ver todas</a>
+            </div>
+            <div class="card-body p-0">
+                {% if ultimas_movimentacoes %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <tbody>
+                            {% for mov in ultimas_movimentacoes %}
+                            <tr>
+                                <td>
+                                    <span class="badge {{ 'bg-success' if mov.tipo == 'entrada' else 'bg-danger' }}">
+                                        {{ mov.tipo|capitalize }}
+                                    </span>
+                                </td>
+                                <td>{{ mov.descricao[:30] }}{% if mov.descricao|length > 30 %}...{% endif %}</td>
+                                <td class="text-end {{ 'text-success' if mov.tipo == 'entrada' else 'text-danger' }}">
+                                    R$ {{ "%.2f"|format(mov.valor) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4 mb-0">Nenhuma movimentação registrada</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Produtos com Estoque Baixo -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-exclamation-triangle me-2"></i>Estoque Baixo</span>
+                <a href="{{ url_for('produtos.listar') }}" class="btn btn-sm btn-outline-primary">Ver todos</a>
+            </div>
+            <div class="card-body p-0">
+                {% if lista_estoque_baixo %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <tbody>
+                            {% for produto in lista_estoque_baixo %}
+                            <tr>
+                                <td>{{ produto.nome }}</td>
+                                <td class="text-end">
+                                    <span class="badge bg-warning text-dark">
+                                        {{ produto.quantidade }} {{ produto.unidade }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4 mb-0">Nenhum produto com estoque baixo</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

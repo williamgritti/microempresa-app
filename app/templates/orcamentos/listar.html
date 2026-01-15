@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Orçamentos - Sistema de Gestão{% endblock %}
+{% block page_title %}Orçamentos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <form class="d-flex gap-2" method="GET">
+                <input type="text" name="busca" class="form-control" placeholder="Buscar..." value="{{ busca }}">
+                <select name="status" class="form-select" style="width: auto;">
+                    <option value="">Status</option>
+                    <option value="pendente" {{ 'selected' if status == 'pendente' }}>Pendente</option>
+                    <option value="aprovado" {{ 'selected' if status == 'aprovado' }}>Aprovado</option>
+                    <option value="recusado" {{ 'selected' if status == 'recusado' }}>Recusado</option>
+                    <option value="concluido" {{ 'selected' if status == 'concluido' }}>Concluído</option>
+                </select>
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search"></i>
+                </button>
+                {% if status or busca %}
+                <a href="{{ url_for('orcamentos.listar') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x"></i>
+                </a>
+                {% endif %}
+            </form>
+            <a href="{{ url_for('orcamentos.novo') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Novo Orçamento
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Número</th>
+                        <th>Cliente</th>
+                        <th class="d-none d-md-table-cell">Data</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center">Status</th>
+                        <th width="150">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for orc in orcamentos.items %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('orcamentos.visualizar', id=orc.id) }}" class="text-decoration-none fw-bold">
+                                {{ orc.numero }}
+                            </a>
+                        </td>
+                        <td>{{ orc.cliente.nome if orc.cliente else '-' }}</td>
+                        <td class="d-none d-md-table-cell">{{ orc.data.strftime('%d/%m/%Y') }}</td>
+                        <td class="text-end fw-bold">R$ {{ "%.2f"|format(orc.total) }}</td>
+                        <td class="text-center">
+                            {% set status_class = {
+                                'pendente': 'bg-warning text-dark',
+                                'aprovado': 'bg-success',
+                                'recusado': 'bg-danger',
+                                'concluido': 'bg-primary'
+                            } %}
+                            <span class="badge {{ status_class.get(orc.status, 'bg-secondary') }}">
+                                {{ orc.status|capitalize }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('orcamentos.gerar_pdf', id=orc.id) }}" class="btn btn-outline-success" title="PDF" target="_blank">
+                                    <i class="bi bi-file-pdf"></i>
+                                </a>
+                                <a href="{{ url_for('orcamentos.editar', id=orc.id) }}" class="btn btn-outline-primary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" title="Excluir"
+                                        onclick="confirmarExclusao({{ orc.id }}, '{{ orc.numero }}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            Nenhum orçamento encontrado
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if orcamentos.pages > 1 %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                {% if orcamentos.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('orcamentos.listar', page=orcamentos.prev_num, status=status, busca=busca) }}">Anterior</a>
+                </li>
+                {% endif %}
+
+                {% for page_num in orcamentos.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == orcamentos.page else '' }}">
+                            <a class="page-link" href="{{ url_for('orcamentos.listar', page=page_num, status=status, busca=busca) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if orcamentos.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('orcamentos.listar', page=orcamentos.next_num, status=status, busca=busca) }}">Próximo</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza que deseja excluir o orçamento <strong id="numeroOrcamento"></strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="formExcluir" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Excluir</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmarExclusao(id, numero) {
+    document.getElementById('numeroOrcamento').textContent = numero;
+    document.getElementById('formExcluir').action = `/orcamentos/${id}/excluir`;
+    new bootstrap.Modal(document.getElementById('modalExcluir')).show();
+}
+</script>
+{% endblock %}

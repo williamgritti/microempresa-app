@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}Financeiro - Sistema de Gestão{% endblock %}
+{% block page_title %}Financeiro{% endblock %}
+
+{% block content %}
+<!-- Resumo -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h6 class="mb-1">Total Entradas</h6>
+                <h4 class="mb-0">R$ {{ "%.2f"|format(total_entradas) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h6 class="mb-1">Total Saídas</h6>
+                <h4 class="mb-0">R$ {{ "%.2f"|format(total_saidas) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card {{ 'bg-primary' if saldo >= 0 else 'bg-warning' }} text-white">
+            <div class="card-body text-center">
+                <h6 class="mb-1">Saldo</h6>
+                <h4 class="mb-0">R$ {{ "%.2f"|format(saldo) }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <form class="d-flex gap-2 flex-wrap" method="GET">
+                <select name="tipo" class="form-select" style="width: auto;">
+                    <option value="">Tipo</option>
+                    <option value="entrada" {{ 'selected' if tipo == 'entrada' }}>Entradas</option>
+                    <option value="saida" {{ 'selected' if tipo == 'saida' }}>Saídas</option>
+                </select>
+                <select name="status" class="form-select" style="width: auto;">
+                    <option value="">Status</option>
+                    <option value="pago" {{ 'selected' if status == 'pago' }}>Pago</option>
+                    <option value="pendente" {{ 'selected' if status == 'pendente' }}>Pendente</option>
+                </select>
+                <input type="month" name="mes" class="form-control" style="width: auto;" value="{{ mes }}">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-filter"></i>
+                </button>
+                {% if tipo or status or mes %}
+                <a href="{{ url_for('financeiro.listar') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x"></i>
+                </a>
+                {% endif %}
+            </form>
+            <div class="btn-group">
+                <a href="{{ url_for('financeiro.nova', tipo_mov='entrada') }}" class="btn btn-success">
+                    <i class="bi bi-plus-lg"></i> Entrada
+                </a>
+                <a href="{{ url_for('financeiro.nova', tipo_mov='saida') }}" class="btn btn-danger">
+                    <i class="bi bi-minus-lg"></i> Saída
+                </a>
+                <a href="{{ url_for('financeiro.relatorio') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-file-bar-graph"></i> Relatório
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th class="d-none d-md-table-cell">Categoria</th>
+                        <th class="text-end">Valor</th>
+                        <th class="text-center">Status</th>
+                        <th width="120">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mov in movimentacoes.items %}
+                    <tr>
+                        <td>{{ mov.data.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {{ mov.descricao[:40] }}{% if mov.descricao|length > 40 %}...{% endif %}
+                            {% if mov.cliente %}
+                            <br><small class="text-muted">{{ mov.cliente.nome }}</small>
+                            {% endif %}
+                        </td>
+                        <td class="d-none d-md-table-cell">{{ mov.categoria or '-' }}</td>
+                        <td class="text-end {{ 'text-success' if mov.tipo == 'entrada' else 'text-danger' }} fw-bold">
+                            {{ '+' if mov.tipo == 'entrada' else '-' }} R$ {{ "%.2f"|format(mov.valor) }}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge {{ 'bg-success' if mov.pago else 'bg-warning text-dark' }}">
+                                {{ 'Pago' if mov.pago else 'Pendente' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <form action="{{ url_for('financeiro.marcar_pago', id=mov.id) }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="btn {{ 'btn-outline-warning' if mov.pago else 'btn-outline-success' }}"
+                                            title="{{ 'Marcar pendente' if mov.pago else 'Marcar pago' }}">
+                                        <i class="bi {{ 'bi-x-circle' if mov.pago else 'bi-check-circle' }}"></i>
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('financeiro.editar', id=mov.id) }}" class="btn btn-outline-primary" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" title="Excluir"
+                                        onclick="confirmarExclusao({{ mov.id }})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            Nenhuma movimentação encontrada
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if movimentacoes.pages > 1 %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                {% if movimentacoes.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('financeiro.listar', page=movimentacoes.prev_num, tipo=tipo, status=status, mes=mes) }}">Anterior</a>
+                </li>
+                {% endif %}
+
+                {% for page_num in movimentacoes.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == movimentacoes.page else '' }}">
+                            <a class="page-link" href="{{ url_for('financeiro.listar', page=page_num, tipo=tipo, status=status, mes=mes) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if movimentacoes.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('financeiro.listar', page=movimentacoes.next_num, tipo=tipo, status=status, mes=mes) }}">Próximo</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Tem certeza que deseja excluir esta movimentação?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="formExcluir" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Excluir</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmarExclusao(id) {
+    document.getElementById('formExcluir').action = `/financeiro/${id}/excluir`;
+    new bootstrap.Modal(document.getElementById('modalExcluir')).show();
+}
+</script>
+{% endblock %}

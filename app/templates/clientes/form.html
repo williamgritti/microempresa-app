@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Editar' if cliente else 'Novo' }} Cliente - Sistema de Gestão{% endblock %}
+{% block page_title %}{{ 'Editar' if cliente else 'Novo' }} Cliente{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">Nome *</label>
+                    <input type="text" name="nome" class="form-control" required
+                           value="{{ cliente.nome if cliente else '' }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Tipo Documento</label>
+                    <select name="tipo_documento" class="form-select" id="tipoDocumento">
+                        <option value="CPF" {{ 'selected' if not cliente or cliente.tipo_documento == 'CPF' }}>CPF</option>
+                        <option value="CNPJ" {{ 'selected' if cliente and cliente.tipo_documento == 'CNPJ' }}>CNPJ</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Documento</label>
+                    <input type="text" name="documento" class="form-control" id="documento"
+                           value="{{ cliente.documento if cliente else '' }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control"
+                           value="{{ cliente.email if cliente else '' }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Telefone</label>
+                    <input type="text" name="telefone" class="form-control" id="telefone"
+                           value="{{ cliente.telefone if cliente else '' }}">
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Endereço</label>
+                    <input type="text" name="endereco" class="form-control"
+                           value="{{ cliente.endereco if cliente else '' }}">
+                </div>
+
+                <div class="col-md-5">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" name="cidade" class="form-control"
+                           value="{{ cliente.cidade if cliente else '' }}">
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-select">
+                        <option value="">Selecione...</option>
+                        {% set estados = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] %}
+                        {% for uf in estados %}
+                        <option value="{{ uf }}" {{ 'selected' if cliente and cliente.estado == uf }}>{{ uf }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">CEP</label>
+                    <input type="text" name="cep" class="form-control" id="cep"
+                           value="{{ cliente.cep if cliente else '' }}">
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Observações</label>
+                    <textarea name="observacoes" class="form-control" rows="3">{{ cliente.observacoes if cliente else '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Salvar
+                </button>
+                <a href="{{ url_for('clientes.listar') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-lg"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Máscaras simples
+document.getElementById('telefone').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.length <= 10) {
+        v = v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+    } else {
+        v = v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+    }
+    e.target.value = v.trim();
+});
+
+document.getElementById('cep').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '');
+    v = v.replace(/(\d{5})(\d{0,3})/, '$1-$2');
+    e.target.value = v.trim();
+});
+
+document.getElementById('documento').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '');
+    let tipo = document.getElementById('tipoDocumento').value;
+
+    if (tipo === 'CPF') {
+        v = v.substring(0, 11);
+        v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+    } else {
+        v = v.substring(0, 14);
+        v = v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
+    }
+    e.target.value = v.trim();
+});
+
+document.getElementById('tipoDocumento').addEventListener('change', function() {
+    document.getElementById('documento').value = '';
+});
+</script>
+{% endblock %}
