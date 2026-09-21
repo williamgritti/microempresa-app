@@ -1,0 +1,9 @@
+# Os arquivos em app/templates/ são templates Jinja, não páginas HTML escritas
+# à mão: a lógica deles é Python e o HTML é o que sai do outro lado. Como são
+# 109 KB contra 53 KB de .py, o linguist somava os dois como HTML e rotulava o
+# repositório inteiro assim, escondendo que isto é um projeto Flask.
+#
+# linguist-detectable=false tira os templates da estatística de linguagem sem
+# afirmar o que eles não são. Marcá-los como "vendored" diria que são código de
+# terceiros, e "documentation" que são documentação; nenhum dos dois é verdade.
+app/templates/** linguist-detectable=false
